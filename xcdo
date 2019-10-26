@@ -24,6 +24,7 @@ _SDK_TARGETS = {
 def _main():
     # type: () -> None
     parser = argparse.ArgumentParser()
+    parser.add_argument("-###", dest="dry_run", action="store_true")
     parser.add_argument("--sdk", "-sdk", default="macosx")
     parser.add_argument("tool")
     toolchain, tool_args = parser.parse_known_args()
@@ -44,6 +45,11 @@ def _main():
         command.extend(resolve_defaults(tool_args))
 
     command.extend(tool_args)
+
+    if toolchain.dry_run:
+        # TODO: quote where needed.
+        print(*command)
+        return
 
     process = subprocess.Popen(command, stdout=sys.stdout, stderr=sys.stderr)
     process.wait()

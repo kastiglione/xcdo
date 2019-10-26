@@ -6,6 +6,12 @@
 
 Use `xcdo` instead of `xcrun` when running `swiftc` or `clang`. It's possible to alias `xcrun` to `xcdo`.
 
+Use the `-###` flag to show, but not execute, the underlying `xcrun` command. For example:
+
+```sh
+xcdo -### -sdk iphoneos clang++ -c source.cpp
+```
+
 ## `xcrun` Defaults
 
 `xcrun` sets up the SDK for the compiler, via the `SDKROOT` environment variable. When using `xcrun -sdk <SDK>`, both `clang` or and `swiftc` will use the `SDKROOT` environment variable to set the `clang -isysroot` flag, or the `swiftc -sdk` flag. Here's a table showing the results:
