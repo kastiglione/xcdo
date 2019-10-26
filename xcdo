@@ -1,0 +1,151 @@
+#!/usr/bin/python
+
+from __future__ import print_function
+
+try:
+    from typing import List
+except ImportError:
+    pass
+
+import argparse
+import json
+import os
+import subprocess
+import sys
+
+
+_SDK_TARGETS = {
+    "iphoneos": "arm64-apple-ios13.0",
+    "iphonesimulator": "x86_64-apple-ios13.0-simulator",
+    "macosx": "x86_64-apple-macosx10.14",
+}
+
+
+def _main():
+    # type: () -> None
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--sdk", "-sdk", default="macosx")
+    parser.add_argument("tool")
+    toolchain, tool_args = parser.parse_known_args()
+
+    command = ["/usr/bin/xcrun", "-sdk", toolchain.sdk, toolchain.tool]
+
+    compilers = ("clang", "clang++", "swiftc")
+    if toolchain.tool in compilers and toolchain.sdk in _SDK_TARGETS:
+        command.extend(("-target", _SDK_TARGETS[toolchain.sdk]))
+
+    tool_defaults = {
+        "swiftc": _swiftc_defaults,
+        "clang++": _clangxx_defaults,
+        "clang": _clang_defaults,
+    }
+    resolve_defaults = tool_defaults.get(toolchain.tool)
+    if resolve_defaults:
+        command.extend(resolve_defaults(tool_args))
+
+    command.extend(tool_args)
+
+    process = subprocess.Popen(command, stdout=sys.stdout, stderr=sys.stderr)
+    process.wait()
+
+
+def _swiftc_defaults(argv):
+    # type: (List[str]) -> List[str]
+    parser = argparse.ArgumentParser("swiftc")
+    parser.add_argument("-module-name", required=True)
+    parser.add_argument("-incremental", action="store_true")
+    parser.add_argument("-output-file-map")
+    parser.add_argument("-enable-batch-mode", action="store_true")
+    parser.add_argument("-whole-module-optimization", "-wmo", action="store_true")
+    args, rest = parser.parse_known_args(argv)
+    sources = [arg for arg in rest if arg.endswith(".swift")]
+
+    defaults = []  # type: List[str]
+
+    # Generate an output-file-map for incremental compiles that need one.
+    if args.incremental and not args.output_file_map:
+        ofm_path = _output_file_map(args.module_name, sources)
+        defaults.extend(("-output-file-map", ofm_path))
+        defaults.append("-driver-show-incremental")
+
+    # Enable batch mode by default (except for WMO compiles).
+    if not args.whole_module_optimization and not args.enable_batch_mode:
+        defaults.append("-enable-batch-mode")
+
+    return defaults
+
+
+def _output_file_map(module_name, sources):
+    # type: (str, List[str]) -> str
+    if not os.path.exists("_incremental"):
+        os.mkdir("_incremental")
+
+    ofm = {
+        source: {
+            "object": "_incremental/{}.o".format(source),
+            "swiftmodule": "_incremental/{}.swiftmodule".format(source),
+            "swift-dependencies": "_incremental/{}.swiftdeps".format(source),
+        }
+        for source in sources
+    }
+
+    ofm[""] = {"swift-dependencies": "_incremental/{}.swiftdeps".format(module_name)}
+
+    path = "_incremental/{}.output-file-map.json".format(module_name)
+    with open(path, "w") as f:
+        json.dump(ofm, f)
+    return path
+
+
+def _clangxx_defaults(argv):
+    # type: (List[str]) -> List[str]
+    return _inner_clang_defaults(argv, "clang++")
+
+
+def _clang_defaults(argv):
+    # type: (List[str]) -> List[str]
+    return _inner_clang_defaults(argv, "clang")
+
+
+def _inner_clang_defaults(argv, tool):
+    # type: (List[str], str) -> List[str]
+    parser = argparse.ArgumentParser("clang")
+    parser.add_argument("-std")
+    parser.add_argument("-S", dest="emit_assembly", action="store_true")
+    parser.add_argument("-x", dest="language")
+    args, rest = parser.parse_known_args(argv)
+
+    defaults = []
+
+    # clang defaults to c++98. Fix that.
+    if not args.std and _is_cxx(tool, args.language, rest):
+        defaults.append("-std=c++17")
+
+    # If no -W flags are given, default to -Wall.
+    if not any(x.startswith("-W") for x in rest):
+        defaults.append("-Wall")
+
+    # Generate less noisey assembly.
+    # Courtesy Greg Parker: https://twitter.com/gparker/status/1147723601656729600
+    if args.emit_assembly:
+        defaults.extend(("-fomit-frame-pointer", "-fno-unwind-tables"))
+
+    # ARC is not enabled default, add it for ObjC(++)
+    if any(x.endswith((".m", ".mm")) for x in rest):
+        defaults.append("-fobjc-arc")
+
+    return defaults
+
+
+def _is_cxx(tool, language, args):
+    if tool == "clang++":
+        return True
+    if language in ("c++", "objective-c++"):
+        return True
+    if any(arg.endswith((".cpp", ".cc", ".mm")) for arg in args):
+        return True
+    return False
+
+
+if __name__ == "__main__":
+    _main()
