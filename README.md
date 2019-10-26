@@ -18,13 +18,13 @@
 
 ### Correct `-target`
 
-`xcdo` picks a compiler `-target` that matches the given `-sdk`. When using `xcrun`, the target arch defaults to `x86_64`, or whatever arch your machine uses.
+Unfortunately, `xcrun` assumes the target arch is `x86_64`, or whatever arch your machine uses. `xcdo` picks a compiler `-target` that matches the given `-sdk`.
 
 `xcdo` determines which [target `-triple`](https://clang.llvm.org/docs/CrossCompilation.html#target-triple) to use based on the `xcrun -sdk` flag. The mapping is:
 
 | SDK | `xcrun` Target | `xcdo` Target |
 | --- | --- | --- |
-| `iphoneos` | `x86_64-apple-ios13.0.0` | *`arm64-apple-ios13.0`* |
+| `iphoneos` | `x86_64-apple-ios13.0.0` | **`arm64-apple-ios13.0`**  |
 | `iphonesimulator` | `x86_64-apple-ios13.0.0-simulator` | `x86_64-apple-ios13.0-simulator` |
 | `macosx` | `x86_64-apple-macosx10.14.0` | `x86_64-apple-macosx10.14` |
 
