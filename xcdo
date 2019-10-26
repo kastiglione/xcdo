@@ -129,6 +129,9 @@ def _inner_clang_defaults(argv, tool):
     # Courtesy Greg Parker: https://twitter.com/gparker/status/1147723601656729600
     if args.emit_assembly:
         defaults.extend(("-fomit-frame-pointer", "-fno-unwind-tables"))
+        # Add -Os too, if no other -O is specified.
+        if not any(x.startswith("-O") for x in rest):
+            defaults.append("-Os")
 
     # ARC is not enabled default, add it for ObjC(++)
     if any(x.endswith((".m", ".mm")) for x in rest):
