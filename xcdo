@@ -147,6 +147,7 @@ def _inner_clang_defaults(argv, tool):
 
 
 def _is_cxx(tool, language, args):
+    # type: (str, str, List[str]) -> bool
     if tool == "clang++":
         return True
     if language in ("c++", "objective-c++"):
