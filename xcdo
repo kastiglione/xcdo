@@ -128,7 +128,7 @@ def _inner_clang_defaults(argv, tool):
         defaults.append("-std=c++17")
 
     # If no -W flags are given, default to -Wall.
-    if not any(x.startswith("-W") for x in rest):
+    if not any(_is_warning_flag(x) for x in rest):
         defaults.append("-Wall")
 
     # Generate less noisey assembly.
@@ -154,6 +154,11 @@ def _is_cxx(tool, language, args):
     if any(arg.endswith((".cpp", ".cc", ".mm")) for arg in args):
         return True
     return False
+
+
+def _is_warning_flag(arg):
+    # type: (str) -> bool
+    return arg.startswith("-W") and not arg.startswith("-Wno-")
 
 
 if __name__ == "__main__":
