@@ -1,6 +1,6 @@
 # `xcdo`
 
-`xcrun` provides some basic defaults, and `xcdo` adds more defaults. Intended for manual (exploratory) use, not from a build system.
+`xcdo` adds more default flags on top of the SDK default that `xcrun` provides. Intended for one off exploratory use, not from a build system.
 
 ## Usage
 
@@ -34,7 +34,7 @@ xcrun -sdk iphoneos clang++ -target arm64-apple-ios13.0 -std=c++17 -Wall -c sour
 
 ### Correct `-target`
 
-Unfortunately, `xcrun` assumes the target arch is `x86_64`, or whatever arch your machine uses. `xcdo` picks a compiler `-target` that matches the given `-sdk`.
+Unfortunately, `xcrun swiftc` and `xcrun clang` both assume the target arch is `x86_64`, or whatever arch your machine uses. `xcdo` picks a compiler `-target` that matches the given `-sdk`.
 
 `xcdo` determines which [target `-triple`](https://clang.llvm.org/docs/CrossCompilation.html#target-triple) to use based on the `xcrun -sdk` flag. The mapping is:
 
