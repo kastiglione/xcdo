@@ -29,7 +29,7 @@ def _main():
     parser.add_argument("tool")
     toolchain, tool_args = parser.parse_known_args()
 
-    command = ["/usr/bin/xcrun", "-sdk", toolchain.sdk, toolchain.tool]
+    command = ["xcrun", "-sdk", toolchain.sdk, toolchain.tool]
 
     compilers = ("clang", "clang++", "swiftc")
     if toolchain.tool in compilers and toolchain.sdk in _SDK_TARGETS:

@@ -15,7 +15,7 @@ xcdo -### -sdk iphoneos clang++ -c source.cpp
 Which prints:
 
 ```sh
-/usr/bin/xcrun -sdk iphoneos clang++ -target arm64-apple-ios13.0 -std=c++17 -Wall -c source.cpp
+xcrun -sdk iphoneos clang++ -target arm64-apple-ios13.0 -std=c++17 -Wall -c source.cpp
 ```
 
 ## `xcrun` Defaults
