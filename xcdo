@@ -58,6 +58,7 @@ def _main():
 def _swiftc_defaults(argv):
     # type: (List[str]) -> List[str]
     parser = argparse.ArgumentParser("swiftc")
+    parser.add_argument("-v", dest="verbose", action="store_true")
     parser.add_argument("-module-name", required=True)
     parser.add_argument("-incremental", action="store_true")
     parser.add_argument("-output-file-map")
@@ -67,6 +68,12 @@ def _swiftc_defaults(argv):
     sources = [arg for arg in rest if arg.endswith(".swift")]
 
     defaults = []  # type: List[str]
+
+    # Using -v shows jobs command lines and includes temp file paths. These
+    # files can't be inspected unless -save-temps is given.
+    # Add -save-temps to make -v more useful.
+    if args.verbose:
+        defaults.append("-save-temps")
 
     # Generate an output-file-map for incremental compiles that need one.
     if args.incremental and not args.output_file_map:
@@ -116,12 +123,17 @@ def _clang_defaults(argv):
 def _inner_clang_defaults(argv, tool):
     # type: (List[str], str) -> List[str]
     parser = argparse.ArgumentParser("clang")
+    parser.add_argument("-v", dest="verbose", action="store_true")
     parser.add_argument("-std")
     parser.add_argument("-S", dest="emit_assembly", action="store_true")
     parser.add_argument("-x", dest="language")
     args, rest = parser.parse_known_args(argv)
 
     defaults = []
+
+    # Add -save-temps to make -v more useful.
+    if args.verbose:
+        defaults.append("-save-temps")
 
     # clang defaults to c++98. Fix that.
     if not args.std and _is_cxx(tool, args.language, rest):

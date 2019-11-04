@@ -32,7 +32,9 @@ xcrun -sdk iphoneos clang++ -target arm64-apple-ios13.0 -std=c++17 -Wall -c sour
 
 `xcdo` is a wrapper for `xcrun` which adds more defaults.
 
-### Correct `-target`
+### General Defaults
+
+#### Correct `-target`
 
 Unfortunately, `xcrun swiftc` and `xcrun clang` both assume the target arch is `x86_64`, or whatever arch your machine uses. `xcdo` picks a compiler `-target` that matches the given `-sdk`.
 
@@ -43,6 +45,10 @@ Unfortunately, `xcrun swiftc` and `xcrun clang` both assume the target arch is `
 | `iphoneos` | `x86_64-apple-ios13.0.0` | **`arm64-apple-ios13.0`**  |
 | `iphonesimulator` | `x86_64-apple-ios13.0.0-simulator` | `x86_64-apple-ios13.0-simulator` |
 | `macosx` | `x86_64-apple-macosx10.14.0` | `x86_64-apple-macosx10.14` |
+
+#### Add `-save-temps` to `-v`
+
+Using `clang -v` or `swiftc -v` prints the underlying commands being run. These command lines might reference temp files, but they're deleted by default at the end of the command. `xcdo` adds `-save-temps` whenever `-v` is given, to allow the temp files to be inspected.
 
 ### Defaults for `swiftc`
 
