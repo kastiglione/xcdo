@@ -59,7 +59,7 @@ def _swiftc_defaults(argv):
     # type: (List[str]) -> List[str]
     parser = argparse.ArgumentParser("swiftc")
     parser.add_argument("-v", dest="verbose", action="store_true")
-    parser.add_argument("-module-name", required=True)
+    parser.add_argument("-module-name")
     parser.add_argument("-incremental", action="store_true")
     parser.add_argument("-output-file-map")
     parser.add_argument("-enable-batch-mode", action="store_true")
@@ -76,8 +76,12 @@ def _swiftc_defaults(argv):
         defaults.append("-save-temps")
 
     # Generate an output-file-map for incremental compiles that need one.
-    if args.incremental and not args.output_file_map:
-        ofm_path = _output_file_map(args.module_name, sources)
+    if args.incremental:
+        module_name = args.module_name or "MODULE"
+        if not args.module_name:
+            defaults.extend(("-module-name", module_name))
+
+        ofm_path = _output_file_map(module_name, sources)
         defaults.extend(("-output-file-map", ofm_path))
         defaults.append("-driver-show-incremental")
 
