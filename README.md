@@ -56,6 +56,10 @@ Using `clang -v` or `swiftc -v` prints the underlying commands being run. These 
 
 Unless `-whole-module-optimization` is used, `xcdo` adds `-enable-batch-mode`.
 
+### Module Interfaces and Library Evolution
+
+If `-emit-module-interface` is specified, then `-enable-library-evolution` is added if not present, since it is required to produce `.swiftinterface` files.
+
 #### Incremental Compilation
 
 Swift incremental compilation requires a JSON output-file-map. Running `xcdo swiftc -incremental` will supply an `-output-file-map` if none is given. This output-file-map is automatically generated. Also, `-driver-show-incremental` is added.
