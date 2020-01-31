@@ -82,7 +82,8 @@ def _swiftc_defaults(argv):
 
     # Generate an output-file-map for incremental compiles that need one.
     if args.incremental:
-        module_name = args.module_name or "MODULE"
+        # Fallback to the first file name as the module name.
+        module_name = args.module_name or os.path.splitext(sources[0])[0]
         if not args.module_name:
             defaults.extend(("-module-name", module_name))
 
