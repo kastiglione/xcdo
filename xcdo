@@ -60,6 +60,7 @@ def _swiftc_defaults(argv):
     parser = argparse.ArgumentParser("swiftc")
     parser.add_argument("-v", dest="verbose", action="store_true")
     parser.add_argument("-emit-module-interface", action="store_true")
+    parser.add_argument("-emit-module-interface-path")
     parser.add_argument("-enable-library-evolution", action="store_true")
     parser.add_argument("-module-name")
     parser.add_argument("-incremental", action="store_true")
@@ -77,7 +78,9 @@ def _swiftc_defaults(argv):
     if args.verbose:
         defaults.append("-save-temps")
 
-    if args.emit_module_interface and not args.enable_library_evolution:
+    if not args.enable_library_evolution and (
+        args.emit_module_interface or args.emit_module_interface_path
+    ):
         defaults.append("-enable-library-evolution")
 
     # Generate an output-file-map for incremental compiles that need one.
