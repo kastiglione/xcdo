@@ -89,9 +89,9 @@ def _swiftc_defaults(argv):
     if args.verbose:
         defaults.append("-save-temps")
 
-    if not args.enable_library_evolution and (
+    if (
         args.emit_module_interface or args.emit_module_interface_path
-    ):
+    ) and not args.enable_library_evolution:
         defaults.append("-enable-library-evolution")
 
     # Generate an output-file-map for incremental compiles that need one.
