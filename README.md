@@ -1,6 +1,6 @@
 # `xcdo`
 
-`xcdo` adds more default flags on top of the SDK default that `xcrun` provides. Intended for one off exploratory use, not from a build system.
+`xcdo` automatically adds necessary or helpful compiler flags to `swiftc` and `clang`. Inspired by `xcrun`, which sets essential environment variables. `xcdo` is intended for exploratory use, not from a build system.
 
 ## Usage
 
@@ -12,65 +12,53 @@ Use the `-###` flag to show, but not execute, the underlying `xcrun` command. Fo
 xcdo -### -sdk iphoneos clang++ -c source.cpp
 ```
 
-Which prints:
+will print:
 
 ```sh
 xcrun -sdk iphoneos clang++ -target arm64-apple-ios13.0 -std=c++17 -Wall -c source.cpp
 ```
 
-## `xcrun` Defaults
+## Features
 
-`xcrun` sets up the SDK for the compiler, via the `SDKROOT` environment variable. When using `xcrun -sdk <SDK>`, both `clang` or and `swiftc` will use the `SDKROOT` environment variable to set the `clang -isysroot` flag, or the `swiftc -sdk` flag. Here's a table showing the results:
+### `swiftc` and `clang`
 
-| SDK | `swift -sdk` / `clang -isysroot` |
-| --- | --- |
-| `iphoneos` | `iPhoneOS.platform/Developer/SDKs/iPhoneOS13.0.sdk` |
-| `iphonesimulator` | `iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator13.0.sdk` |
-| `macosx` | `MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk` |
+#### Better Target Triple
 
-## `xcdo` Defaults
+`xcrun` sets the correct sysroot/sdk, but not the correct target triple. Both `swiftc` and `clang` assume compilation for the current host, which for macOS is `x86_64`. When building for other SDKs, the correct target is needed as well.
 
-`xcdo` is a wrapper for `xcrun` which adds more defaults.
+`xcdo` determines which [target `-triple`](https://clang.llvm.org/docs/CrossCompilation.html#target-triple) to use based on the `-sdk` flag. The mapping is:
 
-### General Defaults
-
-#### Correct `-target`
-
-Unfortunately, `xcrun swiftc` and `xcrun clang` both assume the target arch is `x86_64`, or whatever arch your machine uses. `xcdo` picks a compiler `-target` that matches the given `-sdk`.
-
-`xcdo` determines which [target `-triple`](https://clang.llvm.org/docs/CrossCompilation.html#target-triple) to use based on the `xcrun -sdk` flag. The mapping is:
-
-| SDK | `xcrun` Target | `xcdo` Target |
+| SDK | `xcrun` | `xcdo` |
 | --- | --- | --- |
 | `iphoneos` | `x86_64-apple-ios13.0.0` | **`arm64-apple-ios13.0`**  |
 | `iphonesimulator` | `x86_64-apple-ios13.0.0-simulator` | `x86_64-apple-ios13.0-simulator` |
 | `macosx` | `x86_64-apple-macosx10.14.0` | `x86_64-apple-macosx10.14` |
 
-#### Add `-save-temps` to `-v`
+#### Preserve Temporary Files
 
-Using `clang -v` or `swiftc -v` prints the underlying commands being run. These command lines might reference temp files, but they're deleted by default at the end of the command. `xcdo` adds `-save-temps` whenever `-v` is given, to allow the temp files to be inspected.
+Using `clang -v` or `swiftc -v` prints the underlying commands being run. These command lines often contain temp files, but they are deleted by at the end of the command. `xcdo` adds `-save-temps` whenever `-v` is given, to allow the temp files to be inspected.
 
-### Defaults for `swiftc`
+### `swiftc` Specific
 
-#### `swiftc` Compilation Mode
+#### Compilation Mode
 
 Unless `-whole-module-optimization` is used, `xcdo` adds `-enable-batch-mode`.
 
-### Module Interfaces and Library Evolution
+#### Module Interfaces and Library Evolution
 
 If `-emit-module-interface` is specified, then `-enable-library-evolution` is added if not present, since it is required to produce `.swiftinterface` files.
 
 #### Incremental Compilation
 
-Swift incremental compilation requires a JSON output-file-map. Running `xcdo swiftc -incremental` will supply an `-output-file-map` if none is given. This output-file-map is automatically generated. Also, `-driver-show-incremental` is added.
+Swift incremental compilation requires a JSON output-file-map. When using `-incremental`, `xcdo` will generate an output-file-map if none is given. Also, `-driver-show-incremental` is added.
 
 See Swift's documentation [Driver: Incremental Builds](https://github.com/apple/swift/blob/master/docs/Driver.md#incremental-builds) for details on swift incremental builds.
 
-### Defaults for `clang` 
+### `clang` Specific
 
 #### Language Standard
 
-`clang` defaults to `-std=c++98`, but for interactive use the default should be a modern standard. `xcdo` defaults to `-std=c++17` when no `-std` flag is used.
+`clang` defaults to `-std=c++98`, which is quite old. `xcdo` defaults to `-std=c++17` when no `-std` flag is used.
 
 #### Warnings
 
@@ -82,4 +70,4 @@ See Swift's documentation [Driver: Incremental Builds](https://github.com/apple/
 
 #### Assembly
 
-Generated assembly can be noisey. Running `clang -S` with `xcdo` will add `-fomit-frame-pointer` and `-fno-unwind-tables`. Thanks to Greg Parker for sharing this tip https://twitter.com/gparker/status/1147723601656729600.
+Generated assembly can be noisy. Running `clang -S` with `xcdo` will add `-fomit-frame-pointer` and `-fno-unwind-tables`. Thanks to Greg Parker for sharing this tip https://twitter.com/gparker/status/1147723601656729600.
