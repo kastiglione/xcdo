@@ -70,8 +70,10 @@ def _swiftc_defaults(argv):
     # type: (List[str]) -> List[str]
     parser = SaneArgumentParser("swiftc")
     parser.add_argument("-v", dest="verbose", action="store_true")
+    parser.add_argument("-emit-module", action="store_true")
     parser.add_argument("-emit-module-interface", action="store_true")
     parser.add_argument("-emit-module-interface-path")
+    parser.add_argument("-emit-object", "-c", action="store_true")
     parser.add_argument("-enable-library-evolution", action="store_true")
     parser.add_argument("-module-name")
     parser.add_argument("-incremental", action="store_true")
@@ -95,14 +97,17 @@ def _swiftc_defaults(argv):
         defaults.append("-enable-library-evolution")
 
     # Generate an output-file-map for incremental compiles that need one.
-    if args.incremental and not args.output_file_map:
-        # Fallback to the first file name as the module name.
-        module_name = args.module_name or os.path.splitext(sources[0])[0]
-        if not args.module_name:
-            defaults.extend(("-module-name", module_name))
+    if not args.output_file_map:
+        if args.incremental or (args.emit_module and args.emit_object):
+            # Fallback to the first file name as the module name.
+            module_name = args.module_name
+            if not module_name:
+                module_name = _strip_ext(sources[0])
+                defaults.extend(("-module-name", module_name))
+            ofm_path = _output_file_map(module_name, sources, args.incremental)
+            defaults.extend(("-output-file-map", ofm_path))
 
-        ofm_path = _output_file_map(module_name, sources)
-        defaults.extend(("-output-file-map", ofm_path))
+    if args.incremental:
         defaults.append("-driver-show-incremental")
 
     # Enable batch mode by default (except for WMO compiles).
@@ -112,26 +117,34 @@ def _swiftc_defaults(argv):
     return defaults
 
 
-def _output_file_map(module_name, sources):
+def _output_file_map(module_name, sources, incremental):
     # type: (str, List[str]) -> str
-    if not os.path.exists("_incremental"):
-        os.mkdir("_incremental")
+    if not os.path.exists("_outputs"):
+        os.mkdir("_outputs")
 
-    ofm = {
-        source: {
-            "object": "_incremental/{}.o".format(source),
-            "swiftmodule": "_incremental/{}.swiftmodule".format(source),
-            "swift-dependencies": "_incremental/{}.swiftdeps".format(source),
-        }
-        for source in sources
-    }
+    ofm = {source: _source_map(source, incremental) for source in sources}
 
-    ofm[""] = {"swift-dependencies": "_incremental/{}.swiftdeps".format(module_name)}
+    if incremental:
+        ofm[""] = {"swift-dependencies": "_outputs/{}.swiftdeps".format(module_name)}
 
-    path = "_incremental/{}.output-file-map.json".format(module_name)
+    path = "_outputs/{}.output-file-map.json".format(module_name)
     with open(path, "w") as f:
         json.dump(ofm, f)
     return path
+
+
+def _source_map(source, incremental):
+    # type: (str) -> Dict[str, str]
+    name = _strip_ext(source)
+    source_map = {
+        "object": "_outputs/{}.o".format(name),
+        "swiftmodule": "_outputs/{}.swiftmodule".format(name),
+    }
+
+    if incremental:
+        source_map["swift-dependencies"] = "_outputs/{}.swiftdeps".format(name)
+
+    return source_map
 
 
 def _clangxx_defaults(argv):
@@ -196,6 +209,11 @@ def _is_cxx(tool, language, args):
 def _is_warning_flag(arg):
     # type: (str) -> bool
     return arg.startswith("-W") and not arg.startswith("-Wno-")
+
+
+def _strip_ext(path):
+    # type: (str) -> str
+    return os.path.splitext(path)[0]
 
 
 if __name__ == "__main__":
